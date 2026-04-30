@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="/etc/openstack-deploy/env.sh"
+ENV_FILE="/etc/AutoStack-Epoxy/env.sh"
 
 source "${SCRIPT_DIR}/lib/ui.sh"
 [ -f "$ENV_FILE" ] || die "env.sh 없음. setup.sh를 먼저 실행하세요."

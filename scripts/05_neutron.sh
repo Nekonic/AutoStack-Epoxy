@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/ui.sh"
-source /etc/openstack-deploy/env.sh
+source /etc/AutoStack-Epoxy/env.sh
 
 setup_ovs_bridge() {
     log_step "OVS br-provider 브리지 설정"

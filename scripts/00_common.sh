@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/ui.sh"
-source /etc/openstack-deploy/env.sh
+source /etc/AutoStack-Epoxy/env.sh
 
 log_header "공통 환경 설정 (${MY_HOSTNAME} / ${MY_ROLE})"
 
@@ -50,8 +50,15 @@ network:
       dhcp4: false
 EOF
 chmod 600 /etc/netplan/99-openstack.yaml
+
+# cloud-init이 재부팅 시 netplan을 덮어쓰지 않도록 방지
+mkdir -p /etc/cloud/cloud.cfg.d
+cat > /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg <<EOF
+network: {config: disabled}
+EOF
+
 netplan apply
-log_ok "Netplan 적용 완료"
+log_ok "Netplan 적용 완료 (cloud-init 네트워크 관리 비활성화)"
 
 # ── Chrony ───────────────────────────────────────────────────────────
 log_step "Chrony (NTP) 설치 및 설정"

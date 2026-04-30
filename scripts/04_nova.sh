@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/ui.sh"
-source /etc/openstack-deploy/env.sh
+source /etc/AutoStack-Epoxy/env.sh
 
 # discover 모드: Controller에서 Compute 노드 등록
 if [ "${1:-}" = "discover" ]; then

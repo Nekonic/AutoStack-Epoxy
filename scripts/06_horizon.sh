@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/ui.sh"
-source /etc/openstack-deploy/env.sh
+source /etc/AutoStack-Epoxy/env.sh
 
 [ "$MY_ROLE" = "controller" ] || { log_warn "Horizon은 Controller 노드에서만 실행합니다."; exit 0; }
 

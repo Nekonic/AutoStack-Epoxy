@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/ui.sh"
-source /etc/openstack-deploy/env.sh
+source /etc/AutoStack-Epoxy/env.sh
 
 [ "$MY_ROLE" = "controller" ] || { log_warn "Glance은 Controller 노드에서만 실행합니다."; exit 0; }
 [ -f /root/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }

@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${SCRIPT_DIR}/lib/ui.sh"
-source /etc/openstack-deploy/env.sh
+source /etc/AutoStack-Epoxy/env.sh
 
 # ── Controller ────────────────────────────────────────────────────────
 if [ "$MY_ROLE" = "controller" ]; then
@@ -45,10 +45,10 @@ EOF
     log_step "cinder.conf 설정 (Controller)"
     CINDER_CONF=/etc/cinder/cinder.conf
 
-    crudini --set "$CINDER_CONF" DEFAULT my_ip           "${MY_IP}"
-    crudini --set "$CINDER_CONF" DEFAULT transport_url   "rabbit://openstack:${COMMON_PASS}@controller:5672/"
-    crudini --set "$CINDER_CONF" DEFAULT auth_strategy   "keystone"
-    crudini --set "$CINDER_CONF" DEFAULT state_path      "/var/lib/cinder"
+    crudini --set "$CINDER_CONF" DEFAULT my_ip         "${MY_IP}"
+    crudini --set "$CINDER_CONF" DEFAULT transport_url "rabbit://openstack:${COMMON_PASS}@controller"
+    crudini --set "$CINDER_CONF" DEFAULT auth_strategy "keystone"
+    crudini --set "$CINDER_CONF" DEFAULT state_path    "/var/lib/cinder"
 
     crudini --set "$CINDER_CONF" database connection \
         "mysql+pymysql://cinder:${COMMON_PASS}@controller/cinder"

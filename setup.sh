@@ -8,7 +8,7 @@ source "${SCRIPT_DIR}/lib/role.sh"
 
 check_root
 
-ENV_FILE="/etc/openstack-deploy/env.sh"
+ENV_FILE="/etc/AutoStack-Epoxy/env.sh"
 
 log_header "AutoStack-Epoxy 환경 설정 마법사"
 
@@ -54,16 +54,24 @@ done
 [ -z "$COMMON_PASS" ] && die "패스워드는 비워둘 수 없습니다."
 log_ok "패스워드 설정 완료"
 
-# ── Step 7: 이 노드의 역할 자동 판별 ────────────────────────────────
-log_step "7단계: 이 노드의 역할 판별"
-MY_IP=$(get_nic_ip "$MGMT_IF")
-[ -z "$MY_IP" ] && die "Management NIC ($MGMT_IF)에 IP가 없습니다. netplan을 먼저 설정하세요."
+# ── Step 7: 이 노드 IP 및 역할 판별 ─────────────────────────────────
+log_step "7단계: 이 노드 IP 설정 및 역할 판별"
+
+_current_ip=$(get_nic_ip "$MGMT_IF")
+if [ -n "$_current_ip" ]; then
+    echo -e "  ${BLUE}[→]${NC} 현재 감지된 IP: ${_current_ip}"
+    MY_IP=$(prompt_input "이 노드의 Management 고정 IP" "$_current_ip")
+else
+    echo -e "  ${YELLOW}[!]${NC} ${MGMT_IF}에 IP가 없습니다 (초기 상태). 원하는 고정 IP를 입력하세요."
+    MY_IP=$(prompt_input "이 노드의 Management 고정 IP (예: 10.0.0.11)" "")
+    [ -z "$MY_IP" ] && die "IP를 입력해야 합니다."
+fi
 
 MY_ROLE=$(detect_role "$MY_IP")
 MY_HOSTNAME=$(gen_hostname "$MY_ROLE" "$MY_IP")
 
 if [ "$MY_ROLE" = "unknown" ]; then
-    echo -e "  ${YELLOW}이 노드의 IP ($MY_IP)가 정의된 범위에 속하지 않습니다.${NC}"
+    echo -e "  ${YELLOW}입력한 IP ($MY_IP)가 정의된 범위에 속하지 않습니다.${NC}"
     echo -e "  Controller: $CONTROLLER_RANGE / Compute: $COMPUTE_RANGE / Block: $BLOCK_RANGE"
     die "IP 범위를 다시 확인하세요."
 fi
@@ -112,7 +120,7 @@ echo
 prompt_confirm "이 설정으로 저장하시겠습니까?" || { echo "설정을 취소합니다."; exit 0; }
 
 # ── env.sh 저장 ──────────────────────────────────────────────────────
-mkdir -p /etc/openstack-deploy
+mkdir -p /etc/AutoStack-Epoxy
 cat > "$ENV_FILE" <<EOF
 # OpenStack 배포 환경 변수 - setup.sh에 의해 자동 생성됨
 # 생성 시각: $(date '+%Y-%m-%d %H:%M:%S')

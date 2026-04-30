@@ -54,12 +54,14 @@ Cinder LVM 볼륨 전용 미포맷 디스크가 별도로 필요합니다. (예:
 ```bash
 sudo su
 cd /opt
-git clone <repo_url> openstack-deploy
-cd openstack-deploy
+git clone <repo_url> AutoStack-Epoxy
+cd AutoStack-Epoxy
 chmod +x setup.sh preflight.sh deploy.sh scripts/*.sh
 ```
 
 ### 2단계: 환경 설정 마법사 실행 (전 노드, 각각)
+
+> **네트워크 사전 설정 불필요** — Ubuntu 설치 직후 초기 상태에서 바로 실행 가능합니다.
 
 ```bash
 sudo ./setup.sh
@@ -72,9 +74,12 @@ sudo ./setup.sh
 4. Provider 서브넷 / 게이트웨이 / 할당 풀 입력
 5. 노드 역할 범위 설정 (기본값 사용 가능)
 6. 공통 패스워드 입력
-7. 이 노드의 역할 자동 판별 및 확인
+7. 이 노드의 고정 IP 입력 (현재 IP 감지 시 제안값으로 표시)
+8. 역할 자동 판별 및 확인
 
-설정 결과는 `/etc/openstack-deploy/env.sh` 에 저장됩니다.
+설정 결과는 `/etc/AutoStack-Epoxy/env.sh` 에 저장됩니다.
+
+> 실제 네트워크 적용(`netplan apply`)은 `deploy.sh` 실행 시 `00_common.sh` 단계에서 수행됩니다.
 
 ### 3단계: 환경 검증 (전 노드, 각각)
 
@@ -118,7 +123,7 @@ Block:       00_common → 07_cinder
 ## 파일 구조
 
 ```
-openstack/
+AutoStack-Epoxy/
 ├── setup.sh              # 환경 설정 마법사
 ├── preflight.sh          # 배포 전 환경 검증
 ├── deploy.sh             # 역할별 자동 배포
@@ -140,7 +145,7 @@ openstack/
 
 ---
 
-## 환경 변수 (`/etc/openstack-deploy/env.sh`)
+## 환경 변수 (`/etc/AutoStack-Epoxy/env.sh`)
 
 `setup.sh` 실행 후 생성됩니다. 직접 수정도 가능합니다.
 
