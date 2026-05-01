@@ -87,6 +87,7 @@ sudo ./setup.sh
 6. 공통 패스워드 입력
 7. 이 노드의 고정 IP 입력 (현재 IP 감지 시 제안값으로 표시)
 8. 역할 자동 판별 및 확인
+9. Self-service 네트워크 설정 (인스턴스 내부 네트워크)
 
 설정 결과는 `/etc/AutoStack-Epoxy/env.sh` 에 저장됩니다.
 
@@ -118,6 +119,7 @@ sudo ./deploy.sh
 | `-t`, `--test` | 배포 없이 검증 테스트만 실행 |
 | `-r`, `--reset` | 설치된 OpenStack 전체 제거 후 초기화 (`env.sh` 유지) |
 | `-s`, `--status` | 현재 배포 진행 상태 출력 |
+| `--scan` | Compute/Block 노드 스캔 및 `/etc/hosts` 갱신 (Controller 전용) |
 | `--from <스크립트>` | 지정 스크립트부터 재실행 |
 | `--skip <스크립트>` | 지정 스크립트를 완료로 표시하고 건너뜀 |
 
@@ -155,11 +157,33 @@ Compute:     00_common → 04_nova → 05_neutron
 Block:       00_common → 07_cinder
 ```
 
-> Compute 설치 완료 후 Controller에서 `nova-manage cell_v2 discover_hosts` 가 자동 실행되지 않습니다.
-> Compute 배포 완료 후 Controller에서 아래 명령어를 실행해 Compute 노드를 등록하세요:
-> ```bash
-> sudo ./scripts/04_nova.sh discover
-> ```
+### 노드 간 연결 자동 확인
+
+**Compute / Block 배포 시작 전**, deploy.sh가 자동으로 컨트롤러 연결을 검증합니다:
+- `ping controller` — 기본 네트워크 / `/etc/hosts` 확인
+- `controller:5000` — Keystone 가동 확인
+- `controller:5672` — RabbitMQ 가동 확인
+- `controller:11211` — Memcached 가동 확인
+
+연결 실패 시 에러 메시지와 함께 배포가 중단됩니다.
+
+**Controller 배포 완료 후**, Compute / Block 노드를 자동 스캔하여 `/etc/hosts`를 갱신합니다. 컴퓨트 노드가 2개 이상이어도 모두 탐지됩니다.
+
+### Compute 노드 등록
+
+Compute 배포 완료 후 Controller에서 아래 명령어를 실행해 Nova에 등록합니다:
+
+```bash
+sudo ./scripts/04_nova.sh discover
+```
+
+### 노드 추가 또는 /etc/hosts 재동기화
+
+배포 완료 후 노드를 추가하거나 `/etc/hosts`를 갱신하려면 Controller에서:
+
+```bash
+sudo ./deploy.sh --scan
+```
 
 ---
 
@@ -203,17 +227,20 @@ sudo ./ops/flavor.sh   # 플레이버 관리
 | m1.large | 4 | 8 GB | 80 GB |
 | m1.xlarge | 8 | 16 GB | 160 GB |
 
-### admin-openrc — OpenStack 환경 활성화
+### OpenStack CLI 환경 활성화
 
 배포 완료 후 Controller에서 OpenStack CLI를 사용할 때:
 
 ```bash
-source /root/admin-openrc
+# 관리자
+source ~/admin-openrc
 # 프롬프트가 (openstack:admin@admin) 으로 변경됨
 
-openstack server list
+# 일반 사용자
+source ~/demo-openrc
+# 프롬프트가 (openstack:demo@demo) 으로 변경됨
 
-openstack-deactivate   # 환경 비활성화, 프롬프트 복원
+openstack server list
 ```
 
 ---
@@ -239,7 +266,7 @@ AutoStack-Epoxy/
 │   └── flavor.sh         # 플레이버 관리
 └── lib/
     ├── nic.sh            # NIC 자동 감지 함수
-    ├── role.sh           # IP 기반 역할 판별 함수
+    ├── role.sh           # IP 기반 역할 판별 / 노드 스캔 함수
     ├── check.sh          # 환경 검증 함수
     └── ui.sh             # 출력 헬퍼 (색상, 프롬프트)
 ```
@@ -260,6 +287,8 @@ AutoStack-Epoxy/
 | `PROVIDER_GW` | Provider 게이트웨이 | `192.168.2.2` |
 | `PROVIDER_POOL_START` | Floating IP 시작 | `192.168.2.200` |
 | `PROVIDER_POOL_END` | Floating IP 끝 | `192.168.2.250` |
+| `SELFSERVICE_CIDR` | Self-service 서브넷 | `172.16.1.0/24` |
+| `SELFSERVICE_GW` | Self-service 게이트웨이 | `172.16.1.1` |
 | `CONTROLLER_RANGE` | Controller IP 범위 (마지막 옥텟) | `10-19` |
 | `COMPUTE_RANGE` | Compute IP 범위 | `20-99` |
 | `BLOCK_RANGE` | Block IP 범위 | `100-200` |
@@ -298,4 +327,5 @@ AutoStack-Epoxy/
 - Controller 단일 노드 구성만 지원 (HA 미지원)
 - Swift(Object Storage) 미포함
 - 멀티 Controller는 지원하지 않음
-- 배포 후 노드 추가 시 해당 노드에서 `setup.sh` → `deploy.sh` 실행, Controller에서 `discover_hosts` 수동 실행 필요
+- Compute 노드는 2개 이상 지원 (IP 범위 내 자동 탐지)
+- 노드 추가 후 Controller에서 `--scan` → `04_nova.sh discover` 순으로 실행

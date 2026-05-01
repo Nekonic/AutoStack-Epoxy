@@ -14,13 +14,35 @@ log_ok "hostname: $MY_HOSTNAME"
 
 # ── /etc/hosts ───────────────────────────────────────────────────────
 log_step "/etc/hosts 설정"
+source "${SCRIPT_DIR}/lib/role.sh"
+
+log_info "Compute/Block 노드 스캔 중..."
+mapfile -t _COMPUTE_IPS < <(scan_live_nodes "$COMPUTE_RANGE")
+mapfile -t _BLOCK_IPS   < <(scan_live_nodes "$BLOCK_RANGE")
+
+# 자신이 스캔 결과에 없으면 추가 (아직 ping 안 될 수 있어서)
+_self_in_list=false
+for _ip in "${_COMPUTE_IPS[@]}" "${_BLOCK_IPS[@]}"; do
+    [ "$_ip" = "$MY_IP" ] && _self_in_list=true && break
+done
+if ! $_self_in_list && [ "$MY_IP" != "$CONTROLLER_IP" ]; then
+    case "$MY_ROLE" in
+        compute) _COMPUTE_IPS+=("$MY_IP") ;;
+        block)   _BLOCK_IPS+=("$MY_IP") ;;
+    esac
+fi
+
 sed -i '/^127\.0\.1\.1/s/^/#/' /etc/hosts
 sed -i '/# openstack-deploy-begin/,/# openstack-deploy-end/d' /etc/hosts
 {
     echo "# openstack-deploy-begin"
     echo "${CONTROLLER_IP}    controller"
-    # Controller 노드는 위에서 이미 등록됐으므로 MY_IP가 다를 때만 추가
-    [ "${MY_IP}" != "${CONTROLLER_IP}" ] && echo "${MY_IP}    ${MY_HOSTNAME}"
+    for _ip in "${_COMPUTE_IPS[@]}"; do
+        echo "${_ip}    $(gen_hostname compute "$_ip")"
+    done
+    for _ip in "${_BLOCK_IPS[@]}"; do
+        echo "${_ip}    $(gen_hostname block "$_ip")"
+    done
     echo "# openstack-deploy-end"
 } >> /etc/hosts
 log_ok "/etc/hosts 업데이트 완료"
