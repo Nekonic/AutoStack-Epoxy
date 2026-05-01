@@ -7,8 +7,8 @@ source /etc/AutoStack-Epoxy/env.sh
 
 # ── Controller ────────────────────────────────────────────────────────
 if [ "$MY_ROLE" = "controller" ]; then
-    [ -f /root/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }
-    source /root/admin-openrc
+    [ -f ~/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }
+    source ~/admin-openrc
 
     log_header "Cinder 설치 (Controller)"
 

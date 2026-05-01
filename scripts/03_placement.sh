@@ -6,8 +6,8 @@ source "${SCRIPT_DIR}/lib/ui.sh"
 source /etc/AutoStack-Epoxy/env.sh
 
 [ "$MY_ROLE" = "controller" ] || { log_warn "Placement은 Controller 노드에서만 실행합니다."; exit 0; }
-[ -f /root/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }
-source /root/admin-openrc
+[ -f ~/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }
+source ~/admin-openrc
 
 log_header "Placement 설치"
 

@@ -8,7 +8,7 @@ source /etc/AutoStack-Epoxy/env.sh
 # discover 모드: Controller에서 Compute 노드 등록
 if [ "${1:-}" = "discover" ]; then
     [ "$MY_ROLE" = "controller" ] || { log_error "discover는 Controller에서 실행하세요."; exit 1; }
-    source /root/admin-openrc
+    source ~/admin-openrc
     log_header "Compute 노드 등록 (discover_hosts)"
     su -s /bin/sh -c "nova-manage cell_v2 discover_hosts --verbose" nova
     echo
@@ -19,8 +19,8 @@ fi
 
 # ── Controller: Nova API/Scheduler/Conductor ──────────────────────────
 if [ "$MY_ROLE" = "controller" ]; then
-    [ -f /root/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }
-    source /root/admin-openrc
+    [ -f ~/admin-openrc ] || { log_error "admin-openrc 없음. Keystone 먼저 설치하세요."; exit 1; }
+    source ~/admin-openrc
 
     log_header "Nova 설치 (Controller)"
 
