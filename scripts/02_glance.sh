@@ -70,19 +70,6 @@ crudini --set "$GLANCE_CONF" keystone_authtoken project_name          "service"
 crudini --set "$GLANCE_CONF" keystone_authtoken username              "glance"
 crudini --set "$GLANCE_CONF" keystone_authtoken password              "${COMMON_PASS}"
 
-# paste.ini 경로 명시 — 패키지 설치 위치가 다를 수 있으므로 탐색 후 복사
-PASTE_FILE="/etc/glance/glance-api-paste.ini"
-if [ ! -f "$PASTE_FILE" ]; then
-    PASTE_SRC=$(find /usr/share/glance /usr/lib/python3 -name "glance-api-paste.ini" 2>/dev/null | head -1)
-    if [ -n "$PASTE_SRC" ]; then
-        cp "$PASTE_SRC" "$PASTE_FILE"
-        chown glance:glance "$PASTE_FILE"
-        log_ok "paste config 복사: $PASTE_SRC"
-    else
-        log_warn "glance-api-paste.ini 를 찾을 수 없습니다. 서비스가 실패할 수 있습니다."
-    fi
-fi
-crudini --set "$GLANCE_CONF" paste_deploy config_file "$PASTE_FILE"
 crudini --set "$GLANCE_CONF" paste_deploy flavor "keystone"
 
 crudini --set "$GLANCE_CONF" DEFAULT enabled_backends     "fs:file"
