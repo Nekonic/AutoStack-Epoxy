@@ -56,6 +56,7 @@ log_ok "Bootstrap 완료"
 log_step "Apache 설정"
 grep -q "^ServerName" /etc/apache2/apache2.conf \
     || echo "ServerName controller" >> /etc/apache2/apache2.conf
+systemctl enable apache2
 service apache2 restart
 log_ok "Apache 재시작 완료"
 

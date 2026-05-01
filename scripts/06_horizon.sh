@@ -18,7 +18,7 @@ log_ok "openstack-dashboard 설치 완료"
 log_step "local_settings.py 설정"
 LOCAL_SETTINGS=/etc/openstack-dashboard/local_settings.py
 
-# CACHES: memcached로 변경
+# CACHES: memcached로 변경 (중첩 brace 깊이 추적으로 안정적 교체)
 python3 - <<'PYEOF'
 import re
 
@@ -26,19 +26,31 @@ path = '/etc/openstack-dashboard/local_settings.py'
 with open(path, 'r') as f:
     content = f.read()
 
-# CACHES 블록 교체
 caches_new = """CACHES = {
     'default': {
          'BACKEND': 'django.core.cache.backends.memcached.PyMemcacheCache',
          'LOCATION': 'controller:11211',
     }
 }"""
-content = re.sub(
-    r"CACHES\s*=\s*\{[^}]*(?:\{[^}]*\}[^}]*)?\}",
-    caches_new,
-    content,
-    flags=re.DOTALL
-)
+
+def replace_caches(text, replacement):
+    m = re.search(r'^CACHES\s*=\s*\{', text, re.MULTILINE)
+    if not m:
+        return text + '\n' + replacement + '\n'
+    start = m.start()
+    depth = 0
+    i = m.end() - 1
+    while i < len(text):
+        if text[i] == '{':
+            depth += 1
+        elif text[i] == '}':
+            depth -= 1
+            if depth == 0:
+                return text[:start] + replacement + text[i + 1:]
+        i += 1
+    return text
+
+content = replace_caches(content, caches_new)
 
 # SESSION_ENGINE
 if "SESSION_ENGINE" not in content:
@@ -59,8 +71,15 @@ PYEOF
 sed -i "s|^OPENSTACK_HOST\s*=.*|OPENSTACK_HOST = \"controller\"|" "$LOCAL_SETTINGS"
 
 # OPENSTACK_KEYSTONE_URL
-sed -i "s|^OPENSTACK_KEYSTONE_URL\s*=.*|OPENSTACK_KEYSTONE_URL = \"http://%s:5000/v3\" % OPENSTACK_HOST|" \
-    "$LOCAL_SETTINGS"
+grep -q "^OPENSTACK_KEYSTONE_URL" "$LOCAL_SETTINGS" \
+    && sed -i "s|^OPENSTACK_KEYSTONE_URL\s*=.*|OPENSTACK_KEYSTONE_URL = \"http://%s:5000/v3\" % OPENSTACK_HOST|" \
+        "$LOCAL_SETTINGS" \
+    || echo 'OPENSTACK_KEYSTONE_URL = "http://%s:5000/v3" % OPENSTACK_HOST' >> "$LOCAL_SETTINGS"
+
+# ALLOWED_HOSTS
+grep -q "^ALLOWED_HOSTS" "$LOCAL_SETTINGS" \
+    && sed -i "s|^ALLOWED_HOSTS\s*=.*|ALLOWED_HOSTS = ['*']|" "$LOCAL_SETTINGS" \
+    || echo "ALLOWED_HOSTS = ['*']" >> "$LOCAL_SETTINGS"
 
 # OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT
 grep -q "^OPENSTACK_KEYSTONE_MULTIDOMAIN_SUPPORT" "$LOCAL_SETTINGS" \
@@ -93,6 +112,16 @@ grep -q "^COMPRESS_OFFLINE" "$LOCAL_SETTINGS" \
     || echo "COMPRESS_OFFLINE = False" >> "$LOCAL_SETTINGS"
 
 log_ok "local_settings.py 설정 완료"
+
+# ── Apache WSGIApplicationGroup 설정 ─────────────────────────────────
+log_step "Apache WSGIApplicationGroup 설정"
+DASH_CONF=/etc/apache2/conf-available/openstack-dashboard.conf
+if [ -f "$DASH_CONF" ]; then
+    grep -q "WSGIApplicationGroup" "$DASH_CONF" \
+        || echo "WSGIApplicationGroup %{GLOBAL}" >> "$DASH_CONF"
+    a2enconf openstack-dashboard 2>/dev/null || true
+fi
+log_ok "WSGIApplicationGroup 설정 완료"
 
 # ── Apache 재로드 ─────────────────────────────────────────────────────
 log_step "Apache 재로드"

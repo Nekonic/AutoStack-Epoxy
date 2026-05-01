@@ -108,8 +108,8 @@ EOF
     crudini --set "$NOVA_CONF" placement password            "${COMMON_PASS}"
 
     crudini --set "$NOVA_CONF" vnc enabled                     "true"
-    crudini --set "$NOVA_CONF" vnc server_listen               '${my_ip}'
-    crudini --set "$NOVA_CONF" vnc server_proxyclient_address   '${my_ip}'
+    crudini --set "$NOVA_CONF" vnc server_listen               '$my_ip'
+    crudini --set "$NOVA_CONF" vnc server_proxyclient_address  '$my_ip'
 
     log_ok "nova.conf 설정 완료"
 
@@ -189,7 +189,7 @@ if [ "$MY_ROLE" = "compute" ]; then
 
     crudini --set "$NOVA_CONF" vnc enabled                      "true"
     crudini --set "$NOVA_CONF" vnc server_listen                "0.0.0.0"
-    crudini --set "$NOVA_CONF" vnc server_proxyclient_address   '${my_ip}'
+    crudini --set "$NOVA_CONF" vnc server_proxyclient_address   '$my_ip'
     crudini --set "$NOVA_CONF" vnc novncproxy_base_url          "http://controller:6080/vnc_auto.html"
 
     # KVM 지원 여부에 따라 virt_type 설정

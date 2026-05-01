@@ -47,6 +47,21 @@ log_ok "glance 설치 완료"
 log_step "glance-api.conf 설정"
 GLANCE_CONF=/etc/glance/glance-api.conf
 
+# Ubuntu 24.04 Epoxy 패키지가 conf를 자동 생성하지 않는 경우 대비
+service glance-api stop 2>/dev/null || true
+mkdir -p /etc/glance
+if [ ! -f "$GLANCE_CONF" ]; then
+    SAMPLE=$(find /usr/share/glance /usr/lib/python3 -name "glance-api.conf.sample" 2>/dev/null | head -1)
+    if [ -n "$SAMPLE" ]; then
+        cp "$SAMPLE" "$GLANCE_CONF"
+        chown glance:glance "$GLANCE_CONF"
+        log_ok "glance-api.conf 샘플에서 생성: $SAMPLE"
+    else
+        install -o glance -g glance -m 640 /dev/null "$GLANCE_CONF"
+        log_warn "glance-api.conf 빈 파일로 생성 (샘플 없음)"
+    fi
+fi
+
 crudini --set "$GLANCE_CONF" database connection \
     "mysql+pymysql://glance:${COMMON_PASS}@controller/glance"
 
@@ -75,7 +90,8 @@ fi
 crudini --set "$GLANCE_CONF" paste_deploy config_file "$PASTE_FILE"
 crudini --set "$GLANCE_CONF" paste_deploy flavor "keystone"
 
-crudini --set "$GLANCE_CONF" DEFAULT    enabled_backends "fs:file"
+crudini --set "$GLANCE_CONF" DEFAULT enabled_backends     "fs:file"
+crudini --set "$GLANCE_CONF" DEFAULT use_keystone_limits  "True"
 crudini --set "$GLANCE_CONF" glance_store default_backend "fs"
 crudini --set "$GLANCE_CONF" fs         filesystem_store_datadir "/var/lib/glance/images/"
 

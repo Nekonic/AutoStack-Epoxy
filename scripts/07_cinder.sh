@@ -46,7 +46,7 @@ EOF
     CINDER_CONF=/etc/cinder/cinder.conf
 
     crudini --set "$CINDER_CONF" DEFAULT my_ip         "${MY_IP}"
-    crudini --set "$CINDER_CONF" DEFAULT transport_url "rabbit://openstack:${COMMON_PASS}@controller"
+    crudini --set "$CINDER_CONF" DEFAULT transport_url "rabbit://openstack:${COMMON_PASS}@controller:5672/"
     crudini --set "$CINDER_CONF" DEFAULT auth_strategy "keystone"
     crudini --set "$CINDER_CONF" DEFAULT state_path    "/var/lib/cinder"
 
@@ -120,9 +120,13 @@ if [ "$MY_ROLE" = "block" ]; then
     log_ok "LVM 패키지 설치 완료"
 
     log_step "LVM PV/VG 구성"
-    pvcreate "$LVM_DISK"
-    vgcreate cinder-volumes "$LVM_DISK"
-    log_ok "cinder-volumes VG 생성 완료"
+    if ! pvs "$LVM_DISK" &>/dev/null; then
+        pvcreate "$LVM_DISK"
+    fi
+    if ! vgs cinder-volumes &>/dev/null; then
+        vgcreate cinder-volumes "$LVM_DISK"
+    fi
+    log_ok "cinder-volumes VG 준비 완료"
 
     log_step "lvm.conf 필터 설정"
     # cinder-volumes VG만 허용, 나머지 거부

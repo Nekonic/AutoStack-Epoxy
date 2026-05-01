@@ -65,7 +65,7 @@ Cinder LVM 볼륨 전용 미포맷 디스크가 별도로 필요합니다. (예:
 ```bash
 sudo su
 cd /opt
-git clone <repo_url> AutoStack-Epoxy
+git clone https://github.com/Nekonic/AutoStack-Epoxy.git AutoStack-Epoxy
 cd AutoStack-Epoxy
 chmod +x setup.sh preflight.sh deploy.sh scripts/*.sh
 ```

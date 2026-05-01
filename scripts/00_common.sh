@@ -16,12 +16,13 @@ log_ok "hostname: $MY_HOSTNAME"
 log_step "/etc/hosts 설정"
 sed -i '/^127\.0\.1\.1/s/^/#/' /etc/hosts
 sed -i '/# openstack-deploy-begin/,/# openstack-deploy-end/d' /etc/hosts
-cat >> /etc/hosts <<EOF
-# openstack-deploy-begin
-${CONTROLLER_IP}    controller
-${MY_IP}            ${MY_HOSTNAME}
-# openstack-deploy-end
-EOF
+{
+    echo "# openstack-deploy-begin"
+    echo "${CONTROLLER_IP}    controller"
+    # Controller 노드는 위에서 이미 등록됐으므로 MY_IP가 다를 때만 추가
+    [ "${MY_IP}" != "${CONTROLLER_IP}" ] && echo "${MY_IP}    ${MY_HOSTNAME}"
+    echo "# openstack-deploy-end"
+} >> /etc/hosts
 log_ok "/etc/hosts 업데이트 완료"
 
 # ── apt 최적화 ────────────────────────────────────────────────────────
@@ -195,7 +196,7 @@ ETCD_INITIAL_CLUSTER="controller=http://${MY_IP}:2380"
 ETCD_INITIAL_ADVERTISE_PEER_URLS="http://${MY_IP}:2380"
 ETCD_ADVERTISE_CLIENT_URLS="http://${MY_IP}:2379"
 ETCD_LISTEN_PEER_URLS="http://0.0.0.0:2380"
-ETCD_LISTEN_CLIENT_URLS="http://${MY_IP}:2379"
+ETCD_LISTEN_CLIENT_URLS="http://${MY_IP}:2379,http://localhost:2379"
 EOF
 
 systemctl enable etcd
