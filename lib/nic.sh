@@ -39,14 +39,14 @@ select_nic() {
 
     [ ${#nics[@]} -eq 0 ] && die "사용 가능한 NIC가 없습니다."
 
-    echo -e "\n  사용 가능한 NIC 목록:"
+    echo -e "\n  사용 가능한 NIC 목록:" >&2
     for nic in "${nics[@]}"; do
         local ip
         ip=$(get_nic_ip "$nic")
         if [ -n "$ip" ]; then
-            echo "    $i) $nic  (IP: $ip)"
+            echo "    $i) $nic  (IP: $ip)" >&2
         else
-            echo "    $i) $nic  (IP 없음)"
+            echo "    $i) $nic  (IP 없음)" >&2
         fi
         ((i++))
     done
@@ -58,6 +58,6 @@ select_nic() {
             echo "${nics[$((choice-1))]}"
             return 0
         fi
-        echo "  올바른 번호를 입력하세요."
+        echo "  올바른 번호를 입력하세요." >&2
     done
 }

@@ -49,7 +49,7 @@ find_controller_ip() {
     local prefix start end
     prefix=$(net_prefix "$MY_IP")
     IFS='-' read -r start end <<< "$CONTROLLER_RANGE"
-    log_info "Controller IP 스캔 중 (${prefix}.${start} ~ ${prefix}.${end})..."
+    log_info "Controller IP 스캔 중 (${prefix}.${start} ~ ${prefix}.${end})..." >&2
     for i in $(seq "$start" "$end"); do
         local ip="${prefix}.${i}"
         if ping -c1 -W1 "$ip" &>/dev/null; then
