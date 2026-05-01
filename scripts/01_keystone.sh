@@ -96,6 +96,21 @@ RCEOF
 chmod 600 /root/admin-openrc
 log_ok "/root/admin-openrc 생성 완료"
 
+# ── demo-openrc 생성 ──────────────────────────────────────────────────
+log_step "demo-openrc 생성"
+cat > /root/demo-openrc <<EOF
+export OS_PROJECT_DOMAIN_NAME=Default
+export OS_USER_DOMAIN_NAME=Default
+export OS_PROJECT_NAME=demo
+export OS_USERNAME=demo
+export OS_PASSWORD=${COMMON_PASS}
+export OS_AUTH_URL=http://controller:5000/v3
+export OS_IDENTITY_API_VERSION=3
+export OS_IMAGE_API_VERSION=2
+EOF
+chmod 600 /root/demo-openrc
+log_ok "/root/demo-openrc 생성 완료"
+
 # ── 프로젝트 / 사용자 생성 ────────────────────────────────────────────
 log_step "서비스 프로젝트 및 Demo 생성"
 source /root/admin-openrc

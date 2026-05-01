@@ -70,10 +70,7 @@ crudini --set "$GLANCE_CONF" keystone_authtoken project_name          "service"
 crudini --set "$GLANCE_CONF" keystone_authtoken username              "glance"
 crudini --set "$GLANCE_CONF" keystone_authtoken password              "${COMMON_PASS}"
 
-crudini --set "$GLANCE_CONF" paste_deploy flavor "keystone"
-
 crudini --set "$GLANCE_CONF" DEFAULT enabled_backends     "fs:file"
-crudini --set "$GLANCE_CONF" DEFAULT use_keystone_limits  "True"
 crudini --set "$GLANCE_CONF" glance_store default_backend "fs"
 crudini --set "$GLANCE_CONF" fs         filesystem_store_datadir "/var/lib/glance/images/"
 
