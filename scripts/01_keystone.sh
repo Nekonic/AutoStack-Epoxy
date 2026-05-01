@@ -61,16 +61,38 @@ log_ok "Apache 재시작 완료"
 
 # ── admin-openrc 생성 ─────────────────────────────────────────────────
 log_step "admin-openrc 생성"
-cat > /root/admin-openrc <<EOF
+cat > /root/admin-openrc <<'RCEOF'
 export OS_PROJECT_DOMAIN_NAME=Default
 export OS_USER_DOMAIN_NAME=Default
 export OS_PROJECT_NAME=admin
 export OS_USERNAME=admin
+RCEOF
+cat >> /root/admin-openrc <<EOF
 export OS_PASSWORD=${COMMON_PASS}
+EOF
+cat >> /root/admin-openrc <<'RCEOF'
 export OS_AUTH_URL=http://controller:5000/v3
 export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
-EOF
+
+# venv-like 프롬프트 표시
+if [ -z "${OS_PREV_PS1:-}" ]; then
+    export OS_PREV_PS1="${PS1:-}"
+fi
+export PS1="(openstack:${OS_USERNAME}@${OS_PROJECT_NAME}) ${OS_PREV_PS1}"
+
+openstack-deactivate() {
+    export PS1="${OS_PREV_PS1:-}"
+    unset OS_PROJECT_DOMAIN_NAME OS_USER_DOMAIN_NAME OS_PROJECT_NAME \
+          OS_USERNAME OS_PASSWORD OS_AUTH_URL \
+          OS_IDENTITY_API_VERSION OS_IMAGE_API_VERSION OS_PREV_PS1
+    unset -f openstack-deactivate
+    echo "OpenStack 환경 비활성화됨"
+}
+
+echo "OpenStack 활성화: ${OS_USERNAME} @ ${OS_PROJECT_NAME} (비활성화: openstack-deactivate)"
+RCEOF
+chmod 600 /root/admin-openrc
 log_ok "/root/admin-openrc 생성 완료"
 
 # ── 프로젝트 / 사용자 생성 ────────────────────────────────────────────

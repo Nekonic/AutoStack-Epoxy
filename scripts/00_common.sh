@@ -24,6 +24,41 @@ ${MY_IP}            ${MY_HOSTNAME}
 EOF
 log_ok "/etc/hosts 업데이트 완료"
 
+# ── apt 최적화 ────────────────────────────────────────────────────────
+log_step "apt 최적화"
+
+# Kakao 미러 (한국 고속 미러)
+if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
+    sed -i \
+        -e 's|http://archive.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' \
+        -e 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' \
+        /etc/apt/sources.list.d/ubuntu.sources
+elif [ -f /etc/apt/sources.list ]; then
+    sed -i \
+        -e 's|http://archive.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' \
+        -e 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' \
+        /etc/apt/sources.list
+fi
+log_ok "Kakao 미러 적용"
+
+# 병렬 다운로드
+cat > /etc/apt/apt.conf.d/99parallel <<'EOF'
+Acquire::Queue-Mode "adaptive";
+Acquire::http::Pipeline-Depth "5";
+EOF
+log_ok "병렬 다운로드 설정"
+
+# Compute/Block: Controller의 apt-cacher-ng 프록시 사용
+if [ "$MY_ROLE" != "controller" ]; then
+    if bash -c "echo >/dev/tcp/controller/3142" 2>/dev/null; then
+        echo 'Acquire::http::Proxy "http://controller:3142";' \
+            > /etc/apt/apt.conf.d/01apt-cacher-ng
+        log_ok "apt 캐시 프록시 설정 완료 (controller:3142)"
+    else
+        log_warn "apt-cacher-ng 연결 불가 — 직접 다운로드로 진행"
+    fi
+fi
+
 # ── 기본 패키지 ───────────────────────────────────────────────────────
 log_step "기본 패키지 설치"
 apt update -q
@@ -99,6 +134,11 @@ log_ok "Chrony 설정 완료"
 
 # ── Controller 전용: 인프라 서비스 ───────────────────────────────────
 [ "$MY_ROLE" != "controller" ] && exit 0
+
+log_step "apt-cacher-ng 설치 (패키지 캐시 서버)"
+DEBIAN_FRONTEND=noninteractive apt install -y -q apt-cacher-ng
+systemctl enable --now apt-cacher-ng
+log_ok "apt-cacher-ng 설치 완료 (포트 3142)"
 
 log_step "OpenStack 클라이언트 설치"
 DEBIAN_FRONTEND=noninteractive apt install -y -q python3-openstackclient

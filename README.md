@@ -49,6 +49,17 @@ Cinder LVM 볼륨 전용 미포맷 디스크가 별도로 필요합니다. (예:
 
 ## 빠른 시작
 
+> **권장 설치 방법: SSH 접속 후 진행**
+>
+> VM 콘솔에서 직접 실행할 경우 한글이 깨질 수 있습니다.
+> Ubuntu 설치 후 네트워크를 구성하고 SSH를 활성화한 뒤, **터미널에서 SSH로 접속한 상태**에서 진행하세요.
+>
+> ```bash
+> # Ubuntu 설치 직후 콘솔에서 한 번만 실행 (SSH 활성화)
+> sudo systemctl enable --now ssh
+> ip addr show   # IP 확인 후 SSH 접속
+> ```
+
 ### 1단계: 스크립트 다운로드 (전 노드)
 
 ```bash
@@ -61,7 +72,7 @@ chmod +x setup.sh preflight.sh deploy.sh scripts/*.sh
 
 ### 2단계: 환경 설정 마법사 실행 (전 노드, 각각)
 
-> **네트워크 사전 설정 불필요** — Ubuntu 설치 직후 초기 상태에서 바로 실행 가능합니다.
+> Ubuntu 설치 후 네트워크 기본 설정 및 SSH 접속이 완료된 상태에서 실행합니다.
 
 ```bash
 sudo ./setup.sh
@@ -152,6 +163,61 @@ Block:       00_common → 07_cinder
 
 ---
 
+## 배포 후 운영 도구
+
+Controller 배포 완료 후 `ops/` 스크립트로 이미지와 플레이버를 관리합니다.
+
+```bash
+chmod +x ops/*.sh
+
+sudo ./ops/image.sh    # 이미지 관리
+sudo ./ops/flavor.sh   # 플레이버 관리
+```
+
+### ops/image.sh — 이미지 관리
+
+| 기능 | 설명 |
+|------|------|
+| Ubuntu 다운로드 및 등록 | 20.04 / 22.04 / 24.04 공식 cloud image 자동 다운로드 후 Glance 등록 |
+| Windows 업로드 | 로컬 QCOW2 파일 업로드 (VirtIO + cloudbase-init 포함 이미지 필요) |
+| 커스텀 이미지 업로드 | 로컬 파일 + 포맷 선택 (qcow2/raw/vmdk/iso) |
+| 이미지 삭제 | 이름 또는 ID로 삭제 |
+
+> Windows 이미지는 직접 빌드하거나 [cloudbase.it](https://cloudbase.it/windows-cloud-images/) 에서 받을 수 있습니다.
+
+### ops/flavor.sh — 플레이버 관리
+
+| 기능 | 설명 |
+|------|------|
+| 프리셋 일괄 생성 | m1.tiny ~ m1.xlarge 5종 한 번에 생성 |
+| 커스텀 플레이버 | vCPU / RAM / 루트 디스크 / 스왑 / 임시 디스크 직접 설정 |
+| 플레이버 삭제 | 이름으로 삭제 |
+
+프리셋 플레이버:
+
+| 이름 | vCPU | RAM | Disk |
+|------|------|-----|------|
+| m1.tiny | 1 | 512 MB | 1 GB |
+| m1.small | 1 | 2 GB | 20 GB |
+| m1.medium | 2 | 4 GB | 40 GB |
+| m1.large | 4 | 8 GB | 80 GB |
+| m1.xlarge | 8 | 16 GB | 160 GB |
+
+### admin-openrc — OpenStack 환경 활성화
+
+배포 완료 후 Controller에서 OpenStack CLI를 사용할 때:
+
+```bash
+source /root/admin-openrc
+# 프롬프트가 (openstack:admin@admin) 으로 변경됨
+
+openstack server list
+
+openstack-deactivate   # 환경 비활성화, 프롬프트 복원
+```
+
+---
+
 ## 파일 구조
 
 ```
@@ -168,6 +234,9 @@ AutoStack-Epoxy/
 │   ├── 05_neutron.sh     # Networking 서비스 (Controller/Compute 분기)
 │   ├── 06_horizon.sh     # Dashboard
 │   └── 07_cinder.sh      # Block Storage (Controller/Block 분기)
+├── ops/
+│   ├── image.sh          # 이미지 관리 (Ubuntu/Windows/커스텀)
+│   └── flavor.sh         # 플레이버 관리
 └── lib/
     ├── nic.sh            # NIC 자동 감지 함수
     ├── role.sh           # IP 기반 역할 판별 함수
