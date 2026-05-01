@@ -192,12 +192,13 @@ if [ "$MY_ROLE" = "compute" ]; then
     crudini --set "$NOVA_CONF" vnc server_proxyclient_address   '$my_ip'
     crudini --set "$NOVA_CONF" vnc novncproxy_base_url          "http://controller:6080/vnc_auto.html"
 
-    # KVM 지원 여부에 따라 virt_type 설정
+    # KVM 지원 여부에 따라 virt_type 설정 (nova-compute.conf가 나중에 로드되어 우선됨)
+    NOVA_COMPUTE_CONF=/etc/nova/nova-compute.conf
     if [ -e /dev/kvm ] && grep -qE '(vmx|svm)' /proc/cpuinfo; then
-        crudini --set "$NOVA_CONF" libvirt virt_type "kvm"
+        crudini --set "$NOVA_COMPUTE_CONF" libvirt virt_type "kvm"
         log_ok "virt_type=kvm (하드웨어 가속 사용)"
     else
-        crudini --set "$NOVA_CONF" libvirt virt_type "qemu"
+        crudini --set "$NOVA_COMPUTE_CONF" libvirt virt_type "qemu"
         log_warn "virt_type=qemu (KVM 없음 — 성능 저하)"
     fi
 

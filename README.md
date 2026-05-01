@@ -159,13 +159,13 @@ Block:       00_common → 07_cinder
 
 ### 노드 간 연결 자동 확인
 
-**Compute / Block 배포 시작 전**, deploy.sh가 자동으로 컨트롤러 연결을 검증합니다:
-- `ping controller` — 기본 네트워크 / `/etc/hosts` 확인
+**Compute / Block 노드에서 `setup.sh` 실행 시** Controller 연결을 자동 검증합니다:
+- `ping <controller_ip>` — 기본 네트워크 확인
 - `controller:5000` — Keystone 가동 확인
 - `controller:5672` — RabbitMQ 가동 확인
 - `controller:11211` — Memcached 가동 확인
 
-연결 실패 시 에러 메시지와 함께 배포가 중단됩니다.
+연결 실패 시 에러 메시지와 함께 중단됩니다. Controller 배포가 완료된 후 setup.sh를 실행하세요.
 
 **Controller 배포 완료 후**, Compute / Block 노드를 자동 스캔하여 `/etc/hosts`를 갱신합니다. 컴퓨트 노드가 2개 이상이어도 모두 탐지됩니다.
 
@@ -241,6 +241,46 @@ source ~/demo-openrc
 # 프롬프트가 (openstack:demo@demo) 으로 변경됨
 
 openstack server list
+```
+
+### 인스턴스 생성 및 접속
+
+#### 보안 그룹
+
+인스턴스 생성 시 **현재 프로젝트의** 보안 그룹 ID를 명시적으로 지정하세요.
+이름(`default`)으로 지정 시 다른 프로젝트의 그룹과 충돌할 수 있습니다.
+
+```bash
+# admin 프로젝트의 default SG ID 확인
+SG_ID=$(openstack security group list --project admin -f value -c ID -c Name | grep default | awk '{print $1}')
+
+# 인스턴스 생성
+openstack server create \
+  --flavor m1.tiny \
+  --image cirros \
+  --network selfservice \
+  --security-group "$SG_ID" \
+  my-instance
+```
+
+#### CirrOS 기본 로그인 정보
+
+테스트용 CirrOS 이미지의 기본 계정:
+
+| 항목 | 값 |
+|------|-----|
+| 사용자 | `cirros` |
+| 패스워드 | `gocubsgo` |
+
+#### KVM 없는 환경 (중첩 가상화 미지원)
+
+VMware / VirtualBox 등에서 KVM을 사용할 수 없는 경우 `nova-compute.conf`에 자동으로 `virt_type=qemu`가 설정됩니다. 인스턴스는 정상 생성되지만 성능이 저하됩니다.
+
+수동으로 변경하려면 Compute 노드에서:
+
+```bash
+crudini --set /etc/nova/nova-compute.conf libvirt virt_type qemu
+systemctl restart nova-compute
 ```
 
 ---

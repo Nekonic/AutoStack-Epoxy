@@ -166,6 +166,7 @@ EOF
 
     log_step "서비스 재시작"
     service nova-api restart
+    service nova-conductor restart
     service neutron-server restart
     service neutron-openvswitch-agent restart
     service neutron-dhcp-agent restart
