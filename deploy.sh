@@ -17,12 +17,14 @@ show_help() {
   -t, --test             배포 없이 검증 테스트만 실행
   -r, --reset            설치된 OpenStack 전체 제거 후 초기화 (env.sh 유지)
   -s, --status           현재 배포 진행 상태 출력
+      --scan             Compute/Block 노드 스캔 및 /etc/hosts 갱신 (Controller 전용)
       --from <스크립트>    지정 스크립트부터 재실행
       --skip <스크립트>    지정 스크립트를 완료로 표시하고 건너뜀
 
 예시:
   sudo ./deploy.sh
   sudo ./deploy.sh -r
+  sudo ./deploy.sh --scan
   sudo ./deploy.sh --from 05_neutron.sh
   sudo ./deploy.sh --skip 00_common.sh
   sudo ./deploy.sh -s
@@ -143,6 +145,7 @@ case "${1:-}" in
     -t|--test)   ARG_MODE="test" ;;
     -r|--reset)  ARG_MODE="reset" ;;
     -s|--status) ARG_MODE="status" ;;
+    --scan)      ARG_MODE="scan" ;;
     --from)
         ARG_MODE="from"
         ARG_FROM="${2:-}"
@@ -165,6 +168,44 @@ source "$ENV_FILE"
 if [ "$ARG_MODE" = "test" ]; then
     bash "${SCRIPT_DIR}/test.sh"
     exit $?
+fi
+
+# ── --scan ────────────────────────────────────────────────────────────
+if [ "$ARG_MODE" = "scan" ]; then
+    [ "$MY_ROLE" = "controller" ] || { log_error "--scan은 Controller에서만 실행하세요."; exit 1; }
+    source "${SCRIPT_DIR}/lib/role.sh"
+
+    log_header "Compute/Block 노드 스캔"
+
+    log_step "Compute 노드 스캔 중 (${COMPUTE_RANGE})..."
+    mapfile -t COMPUTE_NODES < <(scan_live_nodes "$COMPUTE_RANGE")
+
+    log_step "Block 노드 스캔 중 (${BLOCK_RANGE})..."
+    mapfile -t BLOCK_NODES < <(scan_live_nodes "$BLOCK_RANGE")
+
+    sed -i '/# openstack-deploy-begin/,/# openstack-deploy-end/d' /etc/hosts
+    {
+        echo "# openstack-deploy-begin"
+        echo "${CONTROLLER_IP}    controller"
+        for ip in "${COMPUTE_NODES[@]}"; do
+            hn=$(gen_hostname "compute" "$ip"); echo "${ip}    ${hn}"
+        done
+        for ip in "${BLOCK_NODES[@]}"; do
+            hn=$(gen_hostname "block" "$ip"); echo "${ip}    ${hn}"
+        done
+        echo "# openstack-deploy-end"
+    } >> /etc/hosts
+
+    [ ${#COMPUTE_NODES[@]} -gt 0 ] \
+        && for ip in "${COMPUTE_NODES[@]}"; do log_ok "Compute: ${ip} ($(gen_hostname compute "$ip"))"; done \
+        || log_warn "응답하는 Compute 노드 없음"
+
+    [ ${#BLOCK_NODES[@]} -gt 0 ] \
+        && for ip in "${BLOCK_NODES[@]}"; do log_ok "Block:   ${ip} ($(gen_hostname block "$ip"))"; done \
+        || log_warn "응답하는 Block 노드 없음"
+
+    log_ok "/etc/hosts 갱신 완료"
+    exit 0
 fi
 
 # ── 역할별 스크립트 목록 ──────────────────────────────────────────────
@@ -309,6 +350,48 @@ echo
 case "$MY_ROLE" in
     controller)
         log_header "Controller 배포 완료"
+
+        # Compute / Block 노드 자동 스캔
+        source "${SCRIPT_DIR}/lib/role.sh"
+        log_step "Compute/Block 노드 스캔 및 /etc/hosts 등록..."
+        mapfile -t COMPUTE_NODES < <(scan_live_nodes "$COMPUTE_RANGE")
+        mapfile -t BLOCK_NODES  < <(scan_live_nodes "$BLOCK_RANGE")
+
+        # /etc/hosts의 openstack 블록을 controller + 발견된 노드로 갱신
+        sed -i '/# openstack-deploy-begin/,/# openstack-deploy-end/d' /etc/hosts
+        {
+            echo "# openstack-deploy-begin"
+            echo "${CONTROLLER_IP}    controller"
+            for ip in "${COMPUTE_NODES[@]}"; do
+                hn=$(gen_hostname "compute" "$ip")
+                echo "${ip}    ${hn}"
+            done
+            for ip in "${BLOCK_NODES[@]}"; do
+                hn=$(gen_hostname "block" "$ip")
+                echo "${ip}    ${hn}"
+            done
+            echo "# openstack-deploy-end"
+        } >> /etc/hosts
+
+        if [ ${#COMPUTE_NODES[@]} -gt 0 ]; then
+            for ip in "${COMPUTE_NODES[@]}"; do
+                hn=$(gen_hostname "compute" "$ip")
+                log_ok "Compute 발견 및 등록: ${ip} (${hn})"
+            done
+        else
+            log_warn "응답하는 Compute 노드 없음"
+        fi
+
+        if [ ${#BLOCK_NODES[@]} -gt 0 ]; then
+            for ip in "${BLOCK_NODES[@]}"; do
+                hn=$(gen_hostname "block" "$ip")
+                log_ok "Block 발견 및 등록: ${ip} (${hn})"
+            done
+        else
+            log_warn "응답하는 Block 노드 없음"
+        fi
+
+        echo
         echo -e "  Compute 노드 배포 완료 후 아래 명령으로 Compute 노드를 등록하세요:"
         echo -e "  ${BOLD}sudo ./scripts/04_nova.sh discover${NC}"
         echo

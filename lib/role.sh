@@ -59,3 +59,19 @@ find_controller_ip() {
     done
     return 1
 }
+
+# 지정 범위에서 살아있는 노드 IP 목록을 공백 구분으로 출력 (병렬 ping)
+scan_live_nodes() {
+    local range="$1"
+    local prefix start end tmp
+    prefix=$(net_prefix "$MY_IP")
+    IFS='-' read -r start end <<< "$range"
+    tmp=$(mktemp)
+    for i in $(seq "$start" "$end"); do
+        local ip="${prefix}.${i}"
+        { ping -c1 -W1 "$ip" &>/dev/null && echo "$ip" >> "$tmp"; } &
+    done
+    wait
+    sort -t. -k4 -n "$tmp"
+    rm -f "$tmp"
+}
