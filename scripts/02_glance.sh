@@ -60,6 +60,19 @@ crudini --set "$GLANCE_CONF" keystone_authtoken project_name          "service"
 crudini --set "$GLANCE_CONF" keystone_authtoken username              "glance"
 crudini --set "$GLANCE_CONF" keystone_authtoken password              "${COMMON_PASS}"
 
+# paste.ini 경로 명시 — 패키지 설치 위치가 다를 수 있으므로 탐색 후 복사
+PASTE_FILE="/etc/glance/glance-api-paste.ini"
+if [ ! -f "$PASTE_FILE" ]; then
+    PASTE_SRC=$(find /usr/share/glance /usr/lib/python3 -name "glance-api-paste.ini" 2>/dev/null | head -1)
+    if [ -n "$PASTE_SRC" ]; then
+        cp "$PASTE_SRC" "$PASTE_FILE"
+        chown glance:glance "$PASTE_FILE"
+        log_ok "paste config 복사: $PASTE_SRC"
+    else
+        log_warn "glance-api-paste.ini 를 찾을 수 없습니다. 서비스가 실패할 수 있습니다."
+    fi
+fi
+crudini --set "$GLANCE_CONF" paste_deploy config_file "$PASTE_FILE"
 crudini --set "$GLANCE_CONF" paste_deploy flavor "keystone"
 
 crudini --set "$GLANCE_CONF" DEFAULT    enabled_backends "fs:file"
@@ -90,28 +103,45 @@ log_ok "DB sync 완료"
 # ── 서비스 재시작 ─────────────────────────────────────────────────────
 log_step "서비스 재시작"
 service glance-api restart
-log_ok "glance-api 재시작 완료"
+
+log_info "glance-api 기동 대기 중 (최대 60초)..."
+for i in $(seq 1 30); do
+    if bash -c "echo >/dev/tcp/controller/9292" 2>/dev/null; then
+        break
+    fi
+    sleep 2
+    if [ "$i" -eq 30 ]; then
+        log_error "glance-api가 60초 내에 기동되지 않았습니다."
+        systemctl status glance-api --no-pager -l | tail -20
+        journalctl -u glance-api --no-pager -n 30
+        exit 1
+    fi
+done
+sleep 1
+log_ok "glance-api 기동 완료"
 
 # ── Cirros 이미지 업로드 ──────────────────────────────────────────────
 log_step "Cirros 테스트 이미지 업로드"
-CIRROS_IMG="/tmp/cirros-0.4.0-x86_64-disk.img"
-if ! glance image-list 2>/dev/null | grep -q "cirros"; then
+CIRROS_VER="0.6.2"
+CIRROS_IMG="/tmp/cirros-${CIRROS_VER}-x86_64-disk.img"
+if ! openstack image show cirros &>/dev/null; then
     if [ ! -f "$CIRROS_IMG" ]; then
-        wget -q -O "$CIRROS_IMG" \
-            http://download.cirros-cloud.net/0.4.0/cirros-0.4.0-x86_64-disk.img
+        wget -q --show-progress -O "$CIRROS_IMG" \
+            "http://download.cirros-cloud.net/${CIRROS_VER}/cirros-${CIRROS_VER}-x86_64-disk.img"
     fi
-    glance image-create --name "cirros" \
+    openstack image create "cirros" \
         --file "$CIRROS_IMG" \
-        --disk-format qcow2 --container-format bare \
-        --visibility=public
-    log_ok "cirros 이미지 업로드 완료"
+        --disk-format qcow2 \
+        --container-format bare \
+        --public
+    log_ok "cirros ${CIRROS_VER} 이미지 업로드 완료"
 else
     log_ok "cirros 이미지 이미 존재 — 스킵"
 fi
 
 # ── 검증 ──────────────────────────────────────────────────────────────
 log_step "검증"
-glance image-list | grep -q "cirros" \
+openstack image show cirros &>/dev/null \
     && log_ok "Glance 정상 동작 확인" \
     || { log_error "Glance 검증 실패"; exit 1; }
 
