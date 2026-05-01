@@ -47,24 +47,6 @@ log_ok "glance 설치 완료"
 log_step "glance-api.conf 설정"
 GLANCE_CONF=/etc/glance/glance-api.conf
 
-# Ubuntu 24.04 Epoxy 패키지가 conf를 자동 생성하지 않는 경우 대비
-systemctl stop glance-api 2>/dev/null || true
-mkdir -p /etc/glance
-if [ ! -f "$GLANCE_CONF" ]; then
-    touch "$GLANCE_CONF"
-    chown glance:glance "$GLANCE_CONF"
-    chmod 640 "$GLANCE_CONF"
-    log_warn "glance-api.conf 없음 — 빈 파일로 생성"
-fi
-
-# glance-api는 --config-dir=/etc/glance/에서 paste.ini를 찾음
-# 패키지는 /usr/share/glance/에만 설치하므로 없으면 복사
-if [ ! -f /etc/glance/glance-api-paste.ini ] && [ -f /usr/share/glance/glance-api-paste.ini ]; then
-    cp /usr/share/glance/glance-api-paste.ini /etc/glance/
-    chown glance:glance /etc/glance/glance-api-paste.ini
-    log_ok "glance-api-paste.ini → /etc/glance/ 복사 완료"
-fi
-
 crudini --set "$GLANCE_CONF" database connection \
     "mysql+pymysql://glance:${COMMON_PASS}@controller/glance"
 
