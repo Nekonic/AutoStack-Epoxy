@@ -189,14 +189,30 @@ sudo ./deploy.sh --scan
 
 ## 배포 후 운영 도구
 
-Controller 배포 완료 후 `ops/` 스크립트로 이미지와 플레이버를 관리합니다.
+Controller 배포 완료 후 `ops/` 스크립트로 네트워크, 이미지, 플레이버를 관리합니다.
 
 ```bash
 chmod +x ops/*.sh
 
+sudo ./ops/network.sh  # 네트워크 초기 설정
 sudo ./ops/image.sh    # 이미지 관리
 sudo ./ops/flavor.sh   # 플레이버 관리
 ```
+
+> 인스턴스를 생성하기 전에 `network.sh` → `image.sh` → `flavor.sh` 순으로 실행하세요.
+
+### ops/network.sh — 네트워크 초기 설정
+
+`env.sh`에 저장된 값을 읽어 자동으로 네트워크를 구성합니다. 이미 존재하는 리소스는 건너뜁니다.
+
+| 기능 | 설명 |
+|------|------|
+| 전체 초기 설정 | Provider + Self-service 네트워크 + 라우터 한 번에 구성 |
+| Provider 네트워크 생성 | Flat 외부 네트워크 + Floating IP 풀 서브넷 생성 |
+| Self-service 네트워크 생성 | VXLAN 내부 네트워크 + 서브넷 생성 |
+| 라우터 생성/연결 | Self-service ↔ Provider 라우팅 설정 |
+| 전체 삭제 | 라우터/서브넷/네트워크 전부 제거 |
+| 상태 확인 | 네트워크 / 서브넷 / 라우터 목록 출력 |
 
 ### ops/image.sh — 이미지 관리
 
@@ -302,6 +318,7 @@ AutoStack-Epoxy/
 │   ├── 06_horizon.sh     # Dashboard
 │   └── 07_cinder.sh      # Block Storage (Controller/Block 분기)
 ├── ops/
+│   ├── network.sh        # 네트워크 초기 설정 (provider/selfservice/router)
 │   ├── image.sh          # 이미지 관리 (Ubuntu/Windows/커스텀)
 │   └── flavor.sh         # 플레이버 관리
 └── lib/
