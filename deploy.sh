@@ -308,29 +308,6 @@ run_script() {
     fi
 }
 
-# ── Compute/Block: 컨트롤러 연결 사전 확인 ───────────────────────────
-if [ "$MY_ROLE" != "controller" ]; then
-    log_header "컨트롤러 연결 확인"
-
-    # 기본 네트워크
-    if ! ping -c1 -W2 controller &>/dev/null; then
-        log_error "controller에 ping 실패 — /etc/hosts 또는 네트워크 설정을 확인하세요."
-        exit 1
-    fi
-    log_ok "controller ping 성공"
-
-    # Keystone (5000), RabbitMQ (5672), Memcached (11211)
-    for port in 5000 5672 11211; do
-        if ! bash -c "echo >/dev/tcp/controller/${port}" 2>/dev/null; then
-            log_error "controller:${port} 연결 실패 — Controller 배포가 완료됐는지 확인하세요."
-            exit 1
-        fi
-        log_ok "controller:${port} 연결 확인"
-    done
-
-    log_header "컨트롤러 연결 정상"
-fi
-
 # ── 배포 시작 ─────────────────────────────────────────────────────────
 log_header "AutoStack-Epoxy 배포 시작"
 echo -e "  노드: ${BOLD}${MY_HOSTNAME}${NC} (${MY_IP}) | 역할: ${BOLD}${MY_ROLE}${NC}"

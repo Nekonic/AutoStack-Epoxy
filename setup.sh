@@ -94,6 +94,21 @@ else
         CONTROLLER_IP=$(prompt_input "Controller IP 직접 입력" "")
     fi
     [ -z "$CONTROLLER_IP" ] && die "Controller IP를 입력해야 합니다."
+
+    # Controller 연결 확인
+    log_info "Controller(${CONTROLLER_IP}) 연결 확인 중..."
+    if ! ping -c1 -W2 "$CONTROLLER_IP" &>/dev/null; then
+        log_error "Controller(${CONTROLLER_IP})에 ping 실패 — 네트워크 설정을 확인하세요."
+        exit 1
+    fi
+    log_ok "Controller(${CONTROLLER_IP}) ping 성공"
+    for port in 5000 5672 11211; do
+        if ! bash -c "echo >/dev/tcp/${CONTROLLER_IP}/${port}" 2>/dev/null; then
+            log_error "${CONTROLLER_IP}:${port} 연결 실패 — Controller 배포가 완료됐는지 확인하세요."
+            exit 1
+        fi
+        log_ok "${CONTROLLER_IP}:${port} 연결 확인"
+    done
 fi
 
 # ── Step 9: Self-service 네트워크 ────────────────────────────────────
