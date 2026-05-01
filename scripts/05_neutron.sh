@@ -174,7 +174,22 @@ EOF
     log_ok "Neutron 서비스 재시작 완료"
 
     log_step "검증"
-    sleep 3
+    log_info "neutron-server 기동 대기 중 (최대 60초)..."
+    for i in $(seq 1 30); do
+        if bash -c "echo >/dev/tcp/controller/9696" 2>/dev/null; then
+            break
+        fi
+        sleep 2
+        if [ "$i" -eq 30 ]; then
+            log_error "neutron-server가 60초 내에 기동되지 않았습니다."
+            log_info "서비스 상태:"
+            systemctl status neutron-server --no-pager -l | tail -30
+            log_info "최근 로그:"
+            journalctl -u neutron-server --no-pager -n 30
+            exit 1
+        fi
+    done
+    sleep 2
     openstack network agent list \
         && log_ok "Neutron 에이전트 확인 완료" \
         || { log_error "Neutron 에이전트 확인 실패"; exit 1; }
