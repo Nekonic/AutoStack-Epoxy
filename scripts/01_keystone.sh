@@ -75,7 +75,7 @@ cat >> ~/admin-openrc <<'RCEOF'
 export OS_AUTH_URL=http://controller:5000/v3
 export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
-export PS1="(openstack:${OS_USERNAME}@${OS_PROJECT_NAME}) ${PS1}"
+export PS1="(openstack:${OS_USERNAME}@${OS_PROJECT_NAME}) ${PS1:-}"
 echo "OpenStack 활성화: ${OS_USERNAME} @ ${OS_PROJECT_NAME}"
 RCEOF
 chmod 600 ~/admin-openrc
@@ -94,7 +94,7 @@ export OS_IDENTITY_API_VERSION=3
 export OS_IMAGE_API_VERSION=2
 EOF
 cat >> ~/demo-openrc <<'RCEOF'
-export PS1="(openstack:${OS_USERNAME}@${OS_PROJECT_NAME}) ${PS1}"
+export PS1="(openstack:${OS_USERNAME}@${OS_PROJECT_NAME}) ${PS1:-}"
 echo "OpenStack 활성화: ${OS_USERNAME} @ ${OS_PROJECT_NAME}"
 RCEOF
 chmod 600 ~/demo-openrc
