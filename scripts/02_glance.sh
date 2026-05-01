@@ -57,6 +57,14 @@ if [ ! -f "$GLANCE_CONF" ]; then
     log_warn "glance-api.conf 없음 — 빈 파일로 생성"
 fi
 
+# glance-api는 --config-dir=/etc/glance/에서 paste.ini를 찾음
+# 패키지는 /usr/share/glance/에만 설치하므로 없으면 복사
+if [ ! -f /etc/glance/glance-api-paste.ini ] && [ -f /usr/share/glance/glance-api-paste.ini ]; then
+    cp /usr/share/glance/glance-api-paste.ini /etc/glance/
+    chown glance:glance /etc/glance/glance-api-paste.ini
+    log_ok "glance-api-paste.ini → /etc/glance/ 복사 완료"
+fi
+
 crudini --set "$GLANCE_CONF" database connection \
     "mysql+pymysql://glance:${COMMON_PASS}@controller/glance"
 
@@ -69,6 +77,8 @@ crudini --set "$GLANCE_CONF" keystone_authtoken user_domain_name      "Default"
 crudini --set "$GLANCE_CONF" keystone_authtoken project_name          "service"
 crudini --set "$GLANCE_CONF" keystone_authtoken username              "glance"
 crudini --set "$GLANCE_CONF" keystone_authtoken password              "${COMMON_PASS}"
+
+crudini --set "$GLANCE_CONF" paste_deploy flavor "keystone"
 
 crudini --set "$GLANCE_CONF" DEFAULT enabled_backends     "fs:file"
 crudini --set "$GLANCE_CONF" glance_store default_backend "fs"
